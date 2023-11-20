@@ -21,19 +21,21 @@ struct HeartbeatInfo {
 
 pub async fn backend_heartbeat(config: std::sync::Arc<crate::config::Config>, mut hb_rx: Receiver<crate::server::ServerStatus>) {
 	// backend will not accept heartbeat on invalid keys, no point handling it.
-	if config.general.auth_key.is_none() {return} else {
+	let mut key_is_invalid = false;
+	if config.general.auth_key.is_none() {key_is_invalid = true} else {
 		// valid keys format
 		// xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 		// -8--------4----4----4----12--------
 		let key_check = config.general.auth_key.clone().unwrap();
 		let key_check: Vec<&str> = key_check.split("-").collect();
-		if key_check.len() != 5 {return}
-		if key_check[0].len() != 8 {return}
-		if key_check[1].len() != 4 {return}
-		if key_check[2].len() != 4 {return}
-		if key_check[3].len() != 4 {return}
-		if key_check[4].len() != 12 {return}
+		if key_check.len() != 5 {key_is_invalid = true}
+		else if key_check[0].len() != 8 {key_is_invalid = true}
+		else if key_check[1].len() != 4 {key_is_invalid = true}
+		else if key_check[2].len() != 4 {key_is_invalid = true}
+		else if key_check[3].len() != 4 {key_is_invalid = true}
+		else if key_check[4].len() != 12 {key_is_invalid = true}
 	}
+	if key_is_invalid {debug!("auth_key has invalid format. canceling heartbeat init");return}
 	
     let mut info = HeartbeatInfo {
         uuid: config.general.auth_key.clone().unwrap_or(String::from("Unknown name!")),
