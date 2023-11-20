@@ -59,6 +59,9 @@ pub struct Client {
     pub state: ClientState,
     pub info: Option<UserData>,
     pub cars: Vec<(u8, Car)>,
+	
+	// we could track who the player is spectating.. usefull for lua.
+	//pub spectates: Option<String>
 }
 
 impl Drop for Client {

@@ -13,6 +13,13 @@ pub struct Car {
     pub tim: f64,
     pub ping: f64,
     pub last_pos_update: Option<Instant>,
+	
+	// if we ever want to make the vehicle electrics available to the lua, we have to track the states and reset the states with every vehicle reset/edit, except for some, like absMode, the lights, esc etc.. Values can be string, float, bool, int.. and modded cars can come with custom electrics
+	//pub electrics: HashMap<String, ...>
+	
+	// could contain the id's or playernames from the players that spectate this car.
+	// usefull for lua.
+	//pub spectated_by: HashMap<..>
 }
 
 impl Car {
