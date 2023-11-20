@@ -174,10 +174,14 @@ impl Client {
                     continue;
                 }
                 if packet.data.len() == 4 {
-                    if packet.data == [68, 111, 110, 101] {
+                    if packet.data == [68, 111, 110, 101] { // data = "Done"
                         break 'syncing;
-                    }
-                }
+					}
+                } else if packet.data.len() == 2 {
+					if packet.data == [83, 82] { // data = ""
+						break 'syncing;
+					}
+				}
                 match packet.data[0] as char {
                     'S' if packet.data.len() > 1 => match packet.data[1] as char {
                         'R' => {
