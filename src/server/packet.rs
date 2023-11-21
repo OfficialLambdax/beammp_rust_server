@@ -52,7 +52,7 @@ pub struct NotificationPacket(String);
 
 impl NotificationPacket {
     pub fn new<S: Into<String>>(msg: S) -> Self {
-        Self(format!("J{}", msg.into()))
+        Self(format!("JWelcome {}", msg.into()))
     }
 }
 

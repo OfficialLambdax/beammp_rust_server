@@ -820,8 +820,8 @@ impl Server {
             } else {
                 let packet_identifier = packet.data[0] as char;
                 match packet_identifier {
-                    'H' => {
-                        // Full sync with server
+                    'H' => { // Player fully joined the server
+                        // tell the player their username
                         self.clients[client_idx]
                             .queue_packet(Packet::Raw(RawPacket::from_str(&format!(
                                 "Sn{}",
@@ -833,6 +833,16 @@ impl Server {
                                     .clone()
                             ))))
                             .await;
+						// send a welcome message of this player to everyone else
+						for client in &self.clients {
+							if client.id == client_idx as u8 {continue}
+							client.queue_packet(Packet::Notification(NotificationPacket::new(
+								self.clients[client_idx]
+									.info.as_ref()
+									.unwrap()
+									.username.clone()
+								))).await;
+						}
 
                         // TODO: Sync all existing cars on server (this code is broken)
                         for client in &self.clients {
