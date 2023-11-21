@@ -209,8 +209,17 @@ impl Client {
                         self.write_packet(Packet::Raw(RawPacket::from_str("AG"))).await?;
 
                         // Send the first half of the file
-                        if mod_name.starts_with("/") == false {
-                            mod_name = format!("/{mod_name}");
+                        // making sure that the requested file cant point to files outside of Resources/Client/*
+                        let path = std::path::Path::new(&mod_name);
+                        let file_name = match path.file_name() {
+                            Some(v) => v.to_str().unwrap(),
+                            None => "", // client just send f, which is invalid. handle?
+                        };
+                        let mod_name = format!("/{}", file_name);
+                        let mod_path = format!("Resources/Client{mod_name}");
+                        if !std::path::Path::new(&mod_path).exists() {
+                            error!("Requested mod path doesnt exists - `{}`", &mod_path);
+                            // handle how?
                         }
 
                         let mut mod_id = 0;
@@ -220,9 +229,7 @@ impl Client {
                             }
                         }
 
-                        let mod_path = format!("Resources/Client{mod_name}");
                         let file_data = std::fs::read(mod_path)?;
-
                         {
                             let mut lock = self.write_half.lock().await;
                             lock.writable().await?;

@@ -102,15 +102,19 @@ pub async fn read_tcp(clients: &mut Vec<Client>) -> anyhow::Result<Option<(usize
 
 pub async fn read_udp(udp_socket: &UdpSocket) -> Option<(SocketAddr, RawPacket)> {
     let mut data = vec![0u8; 4096];
-    let data_size;
-    let data_addr;
+    let data_size: usize;
+    let data_addr: SocketAddr;
 
     match udp_socket.recv_from(&mut data).await {
         Ok((0, _)) => {
             error!("UDP socket is readable, yet has 0 bytes to read!");
             return None;
         }
-        Ok((n, addr)) => (data_size, data_addr) = (n, addr),
+        Ok((n, addr)) => {
+            data_size = n;
+            data_addr = addr;
+            //(data_size, data_addr) = (n, addr) // while this works, rust analyzer marks it as an error
+        },
         Err(_) => return None,
     }
 
@@ -175,7 +179,9 @@ impl Server {
                         let ci_ref = clients_incoming_ref.clone();
 
                         set.spawn(async move {
-                            socket.set_nodelay(true); // TODO: Is this good?
+                            if socket.set_nodelay(true).is_err() { // TODO: Is this good? - data endsup quicker at the client
+                                debug!("No Error: Could not disable TCP_NODELAY (nagle algorithm) on socket");
+                            }
 
                             socket.readable().await.expect("Failed to wait for socket to become readable!");
                             let mut tmp = vec![0u8; 1];
@@ -245,10 +251,6 @@ impl Server {
 
                                             bmod.0.clone()
                                         };
-
-                                        if mod_name.starts_with("/") == false {
-                                            mod_name = format!("/{mod_name}");
-                                        }
 
                                         debug!("[D] Starting transfer of mod {mod_name}!");
 
