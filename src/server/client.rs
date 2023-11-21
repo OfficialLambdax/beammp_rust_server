@@ -26,7 +26,7 @@ use super::packet::*;
 static ATOMIC_ID_COUNTER: AtomicU8 = AtomicU8::new(0);
 
 lazy_static! {
-    pub static ref CLIENT_MOD_PROGRESS: Mutex<HashMap<u8, usize>> = Mutex::new(HashMap::new());
+    pub static ref CLIENT_MOD_PROGRESS: Mutex<HashMap<u8, isize>> = Mutex::new(HashMap::new());
 }
 
 #[derive(PartialEq)]
@@ -59,9 +59,6 @@ pub struct Client {
     pub state: ClientState,
     pub info: Option<UserData>,
     pub cars: Vec<(u8, Car)>,
-	
-	// we could track who the player is spectating.. usefull for lua.
-	//pub spectates: Option<String>
 }
 
 impl Drop for Client {
@@ -170,13 +167,15 @@ impl Client {
         'syncing: while self.state == ClientState::SyncingResources {
             self.socket.readable().await?;
             if let Some(packet) = self.read_packet().await? {
-                if packet.data.len() == 0 { // data = ""
-					break 'syncing;
+                if packet.data.len() == 0 {
+                    continue;
                 }
-                if packet.data.len() == 4 {
-                    if packet.data == [68, 111, 110, 101] { // data = "Done"
-                        break 'syncing;
-					}
+                if (packet.data.len() == 4 && packet.data == [68, 111, 110, 101]) || packet.data.len() == 0 {
+                    {
+                        let mut lock = CLIENT_MOD_PROGRESS.lock().await;
+                        lock.insert(self.id, -1);
+                    }
+                    break 'syncing;
                 }
                 match packet.data[0] as char {
                     'S' if packet.data.len() > 1 => match packet.data[1] as char {
@@ -240,7 +239,7 @@ impl Client {
 
                         {
                             let mut lock = CLIENT_MOD_PROGRESS.lock().await;
-                            lock.insert(self.id, mod_id);
+                            lock.insert(self.id, mod_id as isize);
                         }
                     }
                     _ => error!("Unknown packet! {:?}", packet),
