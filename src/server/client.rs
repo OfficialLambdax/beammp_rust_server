@@ -177,7 +177,7 @@ impl Client {
                 match packet.data[0] as char {
                     'S' if packet.data.len() > 1 => match packet.data[1] as char {
                         'R' => {
-                            let file_packet = if config.mods.len() == 0 {
+                            /*let file_packet = if config.mods.len() == 0 {
                                 RawPacket::from_code('-')
                             } else {
                                 let mut file_data = String::new();
@@ -197,6 +197,23 @@ impl Client {
                             // let file_packet = RawPacket::from_code('-');
                             self.write_packet(Packet::Raw(file_packet))
                                 .await?;
+                        }*/
+                            let files = std::fs::read_dir("Resources/Client");
+                            let file_packet = if files.is_err() { // no mods
+                                RawPacket::from_code('-')
+                            } else {
+                                let mut mods = String::new();
+                                let mut sizes = String::new();
+                                for item in files.unwrap() {
+                                    let item = item.unwrap().path();
+                                    if !item.is_file() {continue}
+                                    mods.push_str(&format!("Resources/Client/{};", item.file_name().unwrap().to_str().unwrap()));
+                                    sizes.push_str(&format!("{};", item.metadata().unwrap().len().to_string()));
+                                }
+                                mods.push_str(&sizes);
+                                RawPacket::from_str(&mods)
+                            };
+                            self.write_packet(Packet::Raw(file_packet)).await?;
                         }
                         _ => error!("Unknown packet! {:?}", packet),
                     }
