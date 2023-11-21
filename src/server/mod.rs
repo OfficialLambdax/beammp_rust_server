@@ -820,8 +820,8 @@ impl Server {
             } else {
                 let packet_identifier = packet.data[0] as char;
                 match packet_identifier {
-                    'H' => { // Player fully joined the server
-                        // tell the player their username
+                    'H' => {
+                        // Full sync with server
                         self.clients[client_idx]
                             .queue_packet(Packet::Raw(RawPacket::from_str(&format!(
                                 "Sn{}",
@@ -831,17 +831,8 @@ impl Server {
                                     .unwrap()
                                     .username
                                     .clone()
-                            )))).await;
-                        // send a welcome message of this player to everyone else
-                        for client in &self.clients {
-                            if client.id == client_idx as u8 {continue}
-                            client.queue_packet(Packet::Notification(NotificationPacket::new(
-                                self.clients[client_idx]
-                                    .info.as_ref()
-                                    .unwrap()
-                                    .username.clone()
-                            ))).await;
-                        }
+                            ))))
+                            .await;
 
                         // TODO: Sync all existing cars on server (this code is broken)
                         for client in &self.clients {
@@ -861,7 +852,7 @@ impl Server {
                         }
                     }
                     'O' => self.parse_vehicle_packet(client_idx, packet).await?,
-                    'C' => {  // format C:PlayerName: Message
+                    'C' => {
                         let playername = &self.clients[client_idx].info.as_ref().unwrap().username;
                         let packet_data = packet.data_as_string();
                         let contents: Vec<&str> = packet_data.split(":").collect();
@@ -873,9 +864,6 @@ impl Server {
                             error!("Message Error - `{}` is trying to send chat messages for another player `{}`", &playername, &contents[1]);
                             return Ok(());
                         }
-
-                        // contents[2] contains the raw chat message for eventual chat filtering
-                        // TODO: Chat filtering?
 
                         info!("[CHAT] {}", packet.data_as_string());
                         self.broadcast(Packet::Raw(packet), None).await;
