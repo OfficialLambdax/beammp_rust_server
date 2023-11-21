@@ -831,18 +831,17 @@ impl Server {
                                     .unwrap()
                                     .username
                                     .clone()
-                            ))))
-                            .await;
-						// send a welcome message of this player to everyone else
-						for client in &self.clients {
-							if client.id == client_idx as u8 {continue}
-							client.queue_packet(Packet::Notification(NotificationPacket::new(
-								self.clients[client_idx]
-									.info.as_ref()
-									.unwrap()
-									.username.clone()
-								))).await;
-						}
+                            )))).await;
+                        // send a welcome message of this player to everyone else
+                        for client in &self.clients {
+                            if client.id == client_idx as u8 {continue}
+                            client.queue_packet(Packet::Notification(NotificationPacket::new(
+                                self.clients[client_idx]
+                                    .info.as_ref()
+                                    .unwrap()
+                                    .username.clone()
+                            ))).await;
+                        }
 
                         // TODO: Sync all existing cars on server (this code is broken)
                         for client in &self.clients {
@@ -862,25 +861,22 @@ impl Server {
                         }
                     }
                     'O' => self.parse_vehicle_packet(client_idx, packet).await?,
-                    'C' => {
+                    'C' => {  // format C:PlayerName: Message
+                        let playername = &self.clients[client_idx].info.as_ref().unwrap().username;
+                        let packet_data = packet.data_as_string();
+                        let contents: Vec<&str> = packet_data.split(":").collect();
+                        if contents.len() < 3 {
+                            error!("Message Error - Message from `{}` is of invalid format", &playername);
+                            return Ok(());
+                        }
+                        if contents[1] != playername {
+                            error!("Message Error - `{}` is trying to send chat messages for another player `{}`", &playername, &contents[1]);
+                            return Ok(());
+                        }
+
+                        // contents[2] contains the raw chat message for eventual chat filtering
                         // TODO: Chat filtering?
-                        // let packet_data = packet.data_as_string();
-                        // let message = packet_data.split(":").collect::<Vec<&str>>().get(2).map(|s| s.to_string()).unwrap_or(String::new());
-                        // let message = message.trim();
-						
-						// format C:PlayerName: Message
-						let playername = &self.clients[client_idx].info.as_ref().unwrap().username;
-						let packet_data = packet.data_as_string();
-						let contents: Vec<&str> = packet_data.split(":").collect();
-						if contents.len() < 3 {
-							error!("Message Error - Message from `{}` is of invalid format", &playername);
-							return Ok(());
-						}
-						if contents[1] != playername {
-							error!("Message Error - `{}` is trying to send chat messages for another player `{}`", &playername, &contents[1]);
-							return Ok(());
-						}
-						
+
                         info!("[CHAT] {}", packet.data_as_string());
                         self.broadcast(Packet::Raw(packet), None).await;
                     }
