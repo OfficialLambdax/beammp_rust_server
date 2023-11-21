@@ -867,6 +867,20 @@ impl Server {
                         // let packet_data = packet.data_as_string();
                         // let message = packet_data.split(":").collect::<Vec<&str>>().get(2).map(|s| s.to_string()).unwrap_or(String::new());
                         // let message = message.trim();
+						
+						// format C:PlayerName: Message
+						let playername = &self.clients[client_idx].info.as_ref().unwrap().username;
+						let packet_data = packet.data_as_string();
+						let contents: Vec<&str> = packet_data.split(":").collect();
+						if contents.len() != 3 {
+							error!("Message Error - Message from `{}` is of invalid format", &playername);
+							return Ok(());
+						}
+						if contents[1] != &self.clients[client_idx].info.as_ref().unwrap().username {
+							error!("Message Error - `{}` is trying to send chat messages for another player `{}`", &playername, &contents[1]);
+							return Ok(());
+						}
+						
                         info!("[CHAT] {}", packet.data_as_string());
                         self.broadcast(Packet::Raw(packet), None).await;
                     }
